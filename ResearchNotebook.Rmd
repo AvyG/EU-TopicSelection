@@ -1,0 +1,431 @@
+---
+title: "Research Notebook"
+output: html_document
+author: "Avelyn Garcia, Stephan Pangaanbean, Chris Butcher"
+date: "31-05-2023"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Analysis of EU Data
+## Research Notebook
+
+(Brief description of the project)
+
+-------------------------------------------------
+Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: []. If a section of the code was copied from a chatGPT query without changes, it will be indicated in the comments, otherwise our code was either refined with chatGPT (we wrote a script and asked chatGPT to correct/improve it) or we wrote original code. 
+
+------------------------------------------------
+
+#### Libraries
+
+```{r libraries, echo=FALSE}
+install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","udpipe"))
+library(httr)
+library(pdftools)
+library(rvest)
+library(tidyverse)
+library(quanteda)
+library(quanteda.textstats)
+library(quanteda.textplots)
+library(wordcloud)
+library(topicmodels)
+library(udpipe)
+```
+
+#### Data Colection
+
+We collect two types of data:
+
+- The keywords associated with each speech. These keywords are scraped from the official website. We want this keyword for validation purposes.
+- The pdf that has the speech. For now, it was for the best to manually download each speech to ensure that they were in English and are the correct speech (a particular case with the speech of 2020, if you try to see the speech online, the link will redirect you to the 2021 speech).
+
+
+```{r crawling identification, echo=FALSE}
+
+# Identify ourselves
+
+httr::set_config(httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:113.0.2) Gecko/20100101 Firefox/113.0.2 (scrapping EU speeches and keywords for a homework <3, thank you for your patience)"))
+
+```
+
+
+```{r keywords_current_president1, echo=FALSE}
+
+# Specify the original url from which we will index and scrap the speeches
+base_url <- 'https://state-of-the-union.ec.europa.eu/index_en'
+
+webpage <- read_html(base_url)
+
+```
+
+
+```{r keywords_current_president2, echo=FALSE}
+
+# Extract the key words from the speeches of the current president
+name_speech <- webpage %>% 
+              html_nodes("h1.ecl-content-block__title") %>%
+              html_nodes(".ecl-link.ecl-link--standalone") %>%
+              html_text()
+name_speech <- head(name_speech,-5)
+
+links <- webpage %>% 
+              html_nodes("h1.ecl-content-block__title") %>%
+              html_nodes(".ecl-link.ecl-link--standalone") %>%
+              html_attr("href")
+links <- head(links,-3)
+
+description_speech <- webpage %>% 
+                      html_nodes("div.ecl-content-block__description") %>%
+                      html_nodes(".ecl") %>%
+                      html_text()
+
+df <- data.frame(name_speech = name_speech, main_topics = description_speech)
+df
+```
+
+
+
+``` {r keywords_previous_presidents1, echo=FALSE}
+
+# Extract the key words from the speeches of previous presidents
+# To be a good bot, we add a small delay time, even if https://ec.europa.eu/robots.txt and https://state-of-the-union.ec.europa.eu/robots.txt do not indicate the necessity of one.
+
+base_url <- 'https://state-of-the-union.ec.europa.eu'
+full_urls <- paste(base_url, tail(links,2),sep='')
+
+pages <- lapply(full_urls, function(u) {
+   wp <- read_html(u)
+   Sys.sleep(11)
+   return(wp)
+})
+
+```
+
+
+```{r keywords_previous_presidents2, echo=FALSE}
+
+# Get the speech keywords from the speeches of the previous two presidents (Run the cell altogether)
+
+# Find the components of interest
+descriptions_speech <- lapply(pages, function(pages) html_nodes(pages, "div.ecl p"))
+names_speech <- lapply(pages, function(pages) html_nodes(pages, "div.ecl h3"))
+
+# Convert them into text
+descriptions_speech <- lapply(descriptions_speech, html_text)
+names_speech <- lapply(names_speech, html_text)
+
+# Clean the element of description (there is extra info)
+descriptions_speech <- lapply(descriptions_speech, function(x) x[!grepl("Address \\| Video", x)])
+
+# Unlist element to save them in a ddf
+descriptions_speech <- unlist(descriptions_speech)
+names_speech <- unlist(names_speech)
+
+# And add these keywords to a matrix to save them
+temp_df <- data.frame(name_speech = names_speech, main_topics = descriptions_speech)
+df <- bind_rows(df, temp_df)
+
+# Create new columns year and speech_text
+df <- df %>% mutate(year = sub(".*\\b(\\d{4})$", "\\1", name_speech),
+                    speech_text = NA)
+df
+```
+
+
+
+```{r download pdfs, echo=FALSE}
+# Here we automatically download the correct pdf an put them in a folder called PDFs in the same directory that this R script is
+
+
+```
+
+
+#### Preprocessing
+
+We notice from the pdfs that some irrelevant information is readable depending on the format which is not consistent within presidents. A few examples:
+
+- The cover of some speeches
+- The page number
+- Titles and subtitles
+- Preambles
+- Finishers
+
+So we try to remove as much as possible of this information without cutting the actual speech.
+** I still new to work on this. Removing the page number at the end, cut some speech words and there are titles still in place. 
+
+```{r readpdfs, echo=FALSE}
+path_to_folder <- "./PDFs/"
+
+pdf_files <- list.files(path = path_to_folder, pattern = "\\.pdf", full.names = TRUE)
+
+for (pdf_file in pdf_files){
+  pdf_speech <- pdf_text(pdf_file)
+  par_year <- regmatches(pdf_speech, regexpr("September\\s*(\\d{4})|STATE OF THE UNION\\s*(\\d{4})", pdf_speech))
+  par_year <- par_year[1]
+  par_year <- str_sub(par_year,-4,-1)
+
+  # pdf_text returns an element for each page, we already know that the 2016 document include more texts than the speech. Even if we can erase the rest of the text in a later step, for simplicity we will do it now
+  
+  if(par_year == "2016"){pdf_speech <- pdf_speech[1:22]}
+  #speech_joint <- pdf_speech
+  
+  # Clean the page number (easier to do it before the merging of pages)
+  pdf_speech <- sub("\\s*\\d+\\s*(\\n)+$", " ", pdf_speech)
+  
+  # Clean the header if exist
+  pdf_speech <- sub("^\\s*State of the Union [0-9]{4}\\s*.*?\\n{4,}", "\n", pdf_speech, ignore.case = TRUE, perl = TRUE)
+  
+  # Collapse the pages
+  speech_joint <- paste(pdf_speech, collapse =" ")
+  
+  # Clean 's
+  speech_joint <- gsub("’s|'s", " ", speech_joint, ignore.case = TRUE)
+  
+  # Clean titles (2015 is not possible because our expression eraised part of the speech)
+  if (par_year %in% c("2012")){
+    speech_joint <- gsub("\\n{2,}\\d+\\s*\\.[A-Za-z:\\s'\\-\\—\\–]+\\n|\\n{2,}\\s*[a-z]\\) [A-Za-z\\s:'\\-\\—\\–]+\\n", "\n", speech_joint, perl = TRUE)
+    }
+  else if (par_year %in% c("2016","2017","2018","2020")){
+    speech_joint <- gsub("\\n{1,}[A-Z:\\-\\—\\–\\s]+\n{1,}", "\n", speech_joint, perl = TRUE) 
+  }
+  else if (par_year %in% c("2021","2022")){
+    speech_joint <- gsub("\\n{3,}[A-Z][A-Za-z\\s]+\\n{1,}", "\n", speech_joint, perl = TRUE) 
+  }
+  
+  # Clean punctuation
+  speech_joint <- gsub("[[:punct:]]", " ", speech_joint)
+  
+  # Clean preamble
+  speech_joint <- sub(".*?(Mr President|Dear President|President \nHonourable Members|Mr  President)", " ", speech_joint)
+
+  # Clean finisher
+  speech_joint <- sub("(SPEECH|Updated version following delivery|For further information| Jean Claude Juncker).*", "", speech_joint)
+  
+  # Clean repetitive addresses to public
+  speech_joint <- gsub("Presidency of the Council|Madam President of the Council|Dear Mr President|Dear President|Mr President|Madam President|Honourable Members of the European Parliament|Honourable Members|Honourable members|Minister|Ladies and Gentlemen|Ladies and gentlemen|My fellow Europeans|My dear colleagues", " ", speech_joint)
+  
+  # Clean spaces
+  speech_joint <- gsub("\\s+", " ", speech_joint)
+  
+  # Match the speech with its year
+  df$speech_text[df$year == par_year] <- speech_joint
+  
+}
+
+df <- as_tibble(df)
+df
+
+```
+
+
+
+
+
+We also tokenize and remove stopword to improve the results.
+
+```{r Load udpipe model, echo=FALSE}
+ud_model <- udpipe_download_model(language = "english")
+ud_model <- udpipe_load_model(ud_model$file_model)
+
+```
+
+
+```{r more steps, echo=False}
+
+df$clean_tokens <- NA
+
+# Preprocessing further the text to less components
+tokens_speech <- corpus(df$speech_text) %>%
+                 tokens() %>%
+                 tokens_tolower() %>%
+                 tokens_remove(stopwords("en")) %>%
+                 as.list()
+
+speech_text <- sapply(tokens_speech, function(u) paste(u, collapse = " "))
+
+tokens_df <- data.frame(year = df$year, speech_token = speech_text, stringsAsFactors = FALSE)
+
+for (i in 1:nrow(tokens_df)){
+  lemma_df <- udpipe_annotate(ud_model, x = tokens_df$speech_token[i]) %>%
+              as.data.frame() 
+  df$clean_tokens[df$year == tokens_df$year[i]] <- paste(lemma_df$lemma, collapse = " ")
+}
+
+df
+
+
+```
+ 
+
+```{r, echo=FALSE}
+
+dfm_matrix <- corpus(df$clean_tokens) %>%
+              tokens() %>%
+              dfm()
+
+dfm_freq_each <- apply(dfm_matrix, 1, function(x) names(sort(x, decreasing = TRUE)[1:10]))
+dfm_freq_each
+
+```
+The "s" come from contractions like "Let's" since we cut punctuation and separated the words. This can be corrected by using lemmatizaton or keeping ' 
+
+
+
+```{r textstem echo=FALSE}
+
+test_df = data.frame(name_speech = df$name_speech, speech_text = df$speech_text)
+
+install.packages(c("textstem","spacyr"))
+
+library(textstem)
+
+test_df <- test_df %>%
+           mutate(text_lemma = sapply(tolower(speech_text), lemmatize_strings))
+
+tokens_speech <- corpus(test_df$text_lemma) %>% quanteda::tokens() %>%          
+                 quanteda::tokens_remove(stopwords("en")) %>%
+                 as.list()
+
+speech_text <- sapply(tokens_speech, function(u) paste(u, collapse = " "))
+
+test_df$tokens_lemma <- speech_text
+
+test_df
+
+# better in general, does not solve the problem of europe/european
+
+```
+
+
+
+
+
+
+
+### Descriptive Analysis
+
+```{r wordcloud for each speech, echo=False}
+
+# Assuming df is your data frame and speech_text is the column containing speeches
+for(i in 1:nrow(df)) {
+  
+  # Tokenize, lower case and remove stopwords for each speech
+  tokens1 <- #df$clean_tokens[i] %>%
+             test_df$tokens_lemma[i] %>%
+             quanteda::corpus() %>%
+             quanteda::tokens() 
+  
+  # Create a dfm for each speech
+  dfm_matrix1 <- dfm(tokens1)
+  
+  # Convert the dfm to a data frame
+  dfm_df1 <- convert(dfm_matrix1, to = "data.frame")
+  
+  # Calculate word frequencies
+  dfm_freq1 <- textstat_frequency(dfm_matrix1)
+
+  
+  # Plot a word cloud for each speech
+  textplot_wordcloud(dfm_matrix1, max_words = 35)
+  title(main = paste("Word Cloud for State of the Union", df$year[i]))
+}
+
+```
+For now is not really informative. It concentrates to much europe and similar words (we can fix that with lemmatization and maybe trimming)
+
+
+
+
+
+```{r collocations, echo=FALSE}
+
+# For now it help with the cleaning, maybe change it to a collocation per speech and not all together
+#colloc = speech %>% 
+#  textstat_collocations(min_count = 10) %>% 
+#  as_tibble()
+
+#colloc
+
+
+```
+Is is even less informative, but is very likely do to the bad cleanning (see 2020 STATE and similar)
+This needs better structuring.
+
+
+```{r savecsv, echo=FALSE}
+# Save the data 
+
+
+```
+
+
+
+
+
+#### Text Analysis (Topic modeling)
+
+Look for more models
+
+```{r, echo=FALSE}
+# LDA, we need to individualize the topics searching
+
+for (i in 1:nrow(df)){
+  dfm_matrix <- #corpus(df$clean_tokens[i]) %>%
+                quanteda::corpus(test_df$tokens_lemma[i]) %>%
+                quanteda::tokens() %>%
+                dfm()
+  lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
+         LDA(k=20, control = list(seed=123, alpha=0.1))
+
+  print(terms(lda))
+}
+
+
+ 
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
+
+
+
+
+#### Text Analysis (Validation)
+
+To validate we have three roads:
+- Compare multiple models
+- Compare each model with the keywords from the website
+- Manual checking
+
+```{r}
+
+```
+
+
+
+#### Conclusions
+
+()
+
+
+
+
+
+
