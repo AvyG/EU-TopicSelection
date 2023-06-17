@@ -266,41 +266,51 @@ To finish preprocessing our texts, we tokenize, lemmatize and remove stopwords t
 
 ```{r textstem}
 
-custom_stopwords = c(stopwords("en"), "europe", "european","also","much")
+custom_stopwords = c(stopwords("en"), "europe", "european", "also", "much")
 
-test_df = data.frame(name_speech = df$name_speech, speech_text = df$speech_text)
+my_tokens <- df$speech_text %>%  tolower() %>%
+                        lemmatize_strings() %>%
+                        corpus() %>%
+                        quanteda::tokens() %>%
+                        quanteda::tokens_remove(custom_stopwords)
 
-test_df <- test_df %>%
-           mutate(text_lemma = sapply(tolower(speech_text), lemmatize_strings))
-
-tokens_speech <- corpus(test_df$text_lemma) %>% quanteda::tokens() %>%          
-                 quanteda::tokens_remove(custom_stopwords) %>%
-                 as.list()
-
-speech_text <- sapply(tokens_speech, function(u) paste(u, collapse = " "))
-
-test_df$tokens_lemma <- speech_text
-
-
-test_df
+length(my_tokens)
 
 ```
 
 ### Descriptive Analysis
 
-We would like to start with some descriptive analysis of the speech. First we use a cloud of words foe each speech to see what are the most common words.
+```{r}
+
+speeches <- corpus(clean_df$tokens_lemma[1]) %>%
+            quanteda::tokens() 
+
+textstat_frequency(speeches)[c(1:100), ]
+
+speeches
+
+str(clean_df$speech_text[1])
+
+str(clean_df$tokens_lemma[1])
+
+
+```
+
+
+
+We would like to start with some descriptive analysis of the speech. First we use a cloud of words for each speech to see what are the most common words.
 
 ```{r wordcloud for each speech}
 
 # Assuming df is your data frame and speech_text is the column containing speeches
-for(i in 1:nrow(df)) {
-  
-  # Tokenize, lower case and remove stopwords for each speech
-  tokens1 <- #df$clean_tokens[i] %>%
-             test_df$tokens_lemma[i] %>%
-             quanteda::corpus() %>%
-             quanteda::tokens() 
-  
+for (i in 1:length(my_tokens)){
+  dfm_matrix <- my_tokens[i] %>% dfm()
+  textplot_wordcloud(dfm_matrix, max_words = 35)
+}
+
+
+dfm_matrix <- my_tokens %>% dfm()
+dfm_matrix 
   # Create a dfm for each speech
   dfm_matrix1 <- dfm(tokens1)
   
@@ -312,9 +322,8 @@ for(i in 1:nrow(df)) {
 
   
   # Plot a word cloud for each speech
-  textplot_wordcloud(dfm_matrix1, max_words = 35)
-  title(main = paste("Word Cloud for State of the Union", df$year[i]))
-}
+  textplot_wordcloud(dfm_matrix, max_words = 35)
+
 
 ```
 # Conclusion!
@@ -339,14 +348,14 @@ Look for more models
 ```{r LDA}
 # LDA, we need to individualize the topics searching
 
-for (i in 1:nrow(df)){
+for (i in 1:nrow(clean_df)){
   dfm_matrix <- #corpus(df$clean_tokens[i]) %>%
-                quanteda::corpus(test_df$tokens_lemma[i]) %>%
+                quanteda::corpus(clean_df$tokens_lemma[i]) %>%
                 quanteda::tokens() %>%
                 dfm()
   
   lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
-         LDA(k=5, control = list(seed=0, alpha=1))
+         LDA(k=5, control = list(seed=0, alpha=1/c(1:10)))
 
   print(terms(lda))
 }
