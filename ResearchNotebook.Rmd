@@ -1,28 +1,65 @@
 ---
 title: "Research Notebook"
-output: html_document
 author: "Avelyn Garcia, Stephan Pangaanbean, Chris Butcher"
 date: "31-05-2023"
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
-# Analysis of EU Data
+# Topic Modeling of the EU State of the Union Speeches
 ## Research Notebook
 
-(Brief description of the project)
+The European Union (EU) is a conglomeration of __ states with a population of __ million people making it the __ most important economy in the world, behind countries like ___. For this position in the world stage, determining the priorities and concerns that the EU had or has is paramount to understand its internal and external policy and its impact.  
 
--------------------------------------------------
-Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: []. If a section of the code was copied from a chatGPT query without changes, it will be indicated in the comments, otherwise our code was either refined with chatGPT (we wrote a script and asked chatGPT to correct/improve it) or we wrote original code. 
+The State of the Union Address is an speech deliver by the President of the European Commission each September to the Parliament that "takes stock of the achievements of the past year and presents the priorities for the year ahead" [https://state-of-the-union.ec.europa.eu/index_en]. It was institutionalized in 2010 with the signed of the Framework Agreement on relations between the European Parliament and the European Commission - Annex IV(5) [https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2010:304:0047:0062:EN:PDF]. 
 
-------------------------------------------------
+Up to 2023, 11 speeches have been delivered, four by former President of the Commission José Manuel Barroso (2010-2013), four by former President President Jean-Claude Juncker (2015-2018) and three by current President of the Commission Ursula von der Leyen (2020-2022) with her last speech for her current mandate schedule for this September. During European parliamentary elections, no address is deliver. 
+
+The main objective of this research notebook is to explain and analysis the main topics of these speeches as they provide a transparent window into the priorities of the European politics and its changes across time.
+
+This research notebook is organized in __ sections.
+
+--------------------------------------------------------------------------------
+Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: 
+
+- Advanced Search Engine
+  We used chat GPT to ask question like:
+  "Can you give me models for topic analysis?", "Can you give me the strengths and weaknesses of each model?", "and what does htmltools?", "Assume there is a [matching] vector with [the] main themes, how can I [concatenate] my vectors to the matrix?"
+  or
+  Including questions about specific errors encounter while coding. For example:
+  "Why do I have this error
+Warning: package ‘tidyverse’ was built under R version 4.2.3Warning: package ‘ggplot2’ was built under R version 4.2.3Error: package or namespace load failed for ‘tidyverse’:[...], [What is happening?]"
+   or
+  "I get the following error
+Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF THE    UNION|State of the Union) [0-9]{4}[\n\s""
+  
+- Code Copilot
+  In some instances, we used chatGPT to suggest how to perform a task or how improve existing code. For example:
+  "and if I [want to] save multiple attributes from my webpage like name, link, description block if exists[,] how can I do it?"
+  or
+  "I am trying to remove the following text from different speeches [give an example of the text] can you give me a regular expression that eliminate this strings"
+  or
+  "I am using pdf_speech <- sub("^\\s*State of the Union [0-9]{4}\\s*[\\sA-Za-z\\s-]*",     "----------", pdf_speech) but a better Europe does not count in my regular 
+
+
+The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to avelynfernanda.garciaaraya@student.kuleuven.be 
+
+--------------------------------------------------------------------------------
 
 #### Libraries
 
-```{r libraries, echo=FALSE}
-install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","udpipe"))
+This are the libraries our project used
+
+```{r libraries}
+# Decomment this if you want to install any of the packages
+#install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem"))
+
 library(httr)
 library(pdftools)
 library(rvest)
@@ -32,27 +69,31 @@ library(quanteda.textstats)
 library(quanteda.textplots)
 library(wordcloud)
 library(topicmodels)
-library(udpipe)
+library(textstem)
+
 ```
 
 #### Data Colection
 
-We collect two types of data:
+For our project we will concentrate in two sources of data
 
-- The keywords associated with each speech. These keywords are scraped from the official website. We want this keyword for validation purposes.
-- The pdf that has the speech. For now, it was for the best to manually download each speech to ensure that they were in English and are the correct speech (a particular case with the speech of 2020, if you try to see the speech online, the link will redirect you to the 2021 speech).
+- The keywords associated with each speech. These keywords are scraped from the official website. We want these keywords for validation purposes.
+
+- The pdf that has the speech. For now, it was for the best to manually download each speech to ensure that: first, they were in English and second, they are the correct speech (for example, a particular case we encounter is accessing the speech of 2020. If one would try to see the speech online, the link will redirect you to the 2021 speech).
+
+In this section, we will scrap the main topic keywords associated with each speech. First we will scrap the keywords of the speeches associated with the current president to then scrap the keywords of the speeches associated with the other two presidents.
 
 
-```{r crawling identification, echo=FALSE}
+```{r crawling identification}
 
-# Identify ourselves
+# We identify ourselves
 
 httr::set_config(httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:113.0.2) Gecko/20100101 Firefox/113.0.2 (scrapping EU speeches and keywords for a homework <3, thank you for your patience)"))
 
 ```
 
 
-```{r keywords_current_president1, echo=FALSE}
+```{r keywords_current_president1}
 
 # Specify the original url from which we will index and scrap the speeches
 base_url <- 'https://state-of-the-union.ec.europa.eu/index_en'
@@ -84,11 +125,11 @@ description_speech <- webpage %>%
 
 df <- data.frame(name_speech = name_speech, main_topics = description_speech)
 df
+
 ```
 
 
-
-``` {r keywords_previous_presidents1, echo=FALSE}
+``` {r keywords_previous_presidents1}
 
 # Extract the key words from the speeches of previous presidents
 # To be a good bot, we add a small delay time, even if https://ec.europa.eu/robots.txt and https://state-of-the-union.ec.europa.eu/robots.txt do not indicate the necessity of one.
@@ -104,8 +145,7 @@ pages <- lapply(full_urls, function(u) {
 
 ```
 
-
-```{r keywords_previous_presidents2, echo=FALSE}
+```{r keywords_previous_presidents2}
 
 # Get the speech keywords from the speeches of the previous two presidents (Run the cell altogether)
 
@@ -134,29 +174,31 @@ df <- df %>% mutate(year = sub(".*\\b(\\d{4})$", "\\1", name_speech),
 df
 ```
 
-
-
-```{r download pdfs, echo=FALSE}
-# Here we automatically download the correct pdf an put them in a folder called PDFs in the same directory that this R script is
-
+```{r save data}
+# We save the data to avoid calling the scrapper all the time
+save.image("df_keywords.RData")
 
 ```
+
+We can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then talk mainly about economic recuperation mixed with the migration crisis and investment across multiple industries to finally mainly talk about COVID19, health and the Ukraine war.
 
 
 #### Preprocessing
 
-We notice from the pdfs that some irrelevant information is readable depending on the format which is not consistent within presidents. A few examples:
+First, as mention above we manually downloaded the PDF of interest (which are together with this notebook). The reason for that is to ensure the quality and appropriateness of our text. Equally mentioned above, during our scrapping we encounter that some links that were wrongly linked or the speech proposed were in other languages besides English.
+
+We notice from the pdfs that some irrelevant information is readable depending on the format of the document. This extra information variates across speeches. Some examples of this irrelevant information for our purposes are:
 
 - The cover of some speeches
 - The page number
 - Titles and subtitles
 - Preambles
+- Images
 - Finishers
 
-So we try to remove as much as possible of this information without cutting the actual speech.
-** I still new to work on this. Removing the page number at the end, cut some speech words and there are titles still in place. 
+We try clean the text so we have as much of the spoken speech as possible
 
-```{r readpdfs, echo=FALSE}
+```{r readpdfs}
 path_to_folder <- "./PDFs/"
 
 pdf_files <- list.files(path = path_to_folder, pattern = "\\.pdf", full.names = TRUE)
@@ -170,7 +212,6 @@ for (pdf_file in pdf_files){
   # pdf_text returns an element for each page, we already know that the 2016 document include more texts than the speech. Even if we can erase the rest of the text in a later step, for simplicity we will do it now
   
   if(par_year == "2016"){pdf_speech <- pdf_speech[1:22]}
-  #speech_joint <- pdf_speech
   
   # Clean the page number (easier to do it before the merging of pages)
   pdf_speech <- sub("\\s*\\d+\\s*(\\n)+$", " ", pdf_speech)
@@ -220,94 +261,36 @@ df
 
 ```
 
+To finish preprocessing our texts, we tokenize, lemmatize and remove stopwords to improve the results.
 
 
+```{r textstem}
 
-
-We also tokenize and remove stopword to improve the results.
-
-```{r Load udpipe model, echo=FALSE}
-ud_model <- udpipe_download_model(language = "english")
-ud_model <- udpipe_load_model(ud_model$file_model)
-
-```
-
-
-```{r more steps, echo=False}
-
-df$clean_tokens <- NA
-
-# Preprocessing further the text to less components
-tokens_speech <- corpus(df$speech_text) %>%
-                 tokens() %>%
-                 tokens_tolower() %>%
-                 tokens_remove(stopwords("en")) %>%
-                 as.list()
-
-speech_text <- sapply(tokens_speech, function(u) paste(u, collapse = " "))
-
-tokens_df <- data.frame(year = df$year, speech_token = speech_text, stringsAsFactors = FALSE)
-
-for (i in 1:nrow(tokens_df)){
-  lemma_df <- udpipe_annotate(ud_model, x = tokens_df$speech_token[i]) %>%
-              as.data.frame() 
-  df$clean_tokens[df$year == tokens_df$year[i]] <- paste(lemma_df$lemma, collapse = " ")
-}
-
-df
-
-
-```
- 
-
-```{r, echo=FALSE}
-
-dfm_matrix <- corpus(df$clean_tokens) %>%
-              tokens() %>%
-              dfm()
-
-dfm_freq_each <- apply(dfm_matrix, 1, function(x) names(sort(x, decreasing = TRUE)[1:10]))
-dfm_freq_each
-
-```
-The "s" come from contractions like "Let's" since we cut punctuation and separated the words. This can be corrected by using lemmatizaton or keeping ' 
-
-
-
-```{r textstem echo=FALSE}
+custom_stopwords = c(stopwords("en"), "europe", "european","also","much")
 
 test_df = data.frame(name_speech = df$name_speech, speech_text = df$speech_text)
-
-install.packages(c("textstem","spacyr"))
-
-library(textstem)
 
 test_df <- test_df %>%
            mutate(text_lemma = sapply(tolower(speech_text), lemmatize_strings))
 
 tokens_speech <- corpus(test_df$text_lemma) %>% quanteda::tokens() %>%          
-                 quanteda::tokens_remove(stopwords("en")) %>%
+                 quanteda::tokens_remove(custom_stopwords) %>%
                  as.list()
 
 speech_text <- sapply(tokens_speech, function(u) paste(u, collapse = " "))
 
 test_df$tokens_lemma <- speech_text
 
-test_df
 
-# better in general, does not solve the problem of europe/european
+test_df
 
 ```
 
-
-
-
-
-
-
 ### Descriptive Analysis
 
-```{r wordcloud for each speech, echo=False}
+We would like to start with some descriptive analysis of the speech. First we use a cloud of words foe each speech to see what are the most common words.
+
+```{r wordcloud for each speech}
 
 # Assuming df is your data frame and speech_text is the column containing speeches
 for(i in 1:nrow(df)) {
@@ -334,30 +317,14 @@ for(i in 1:nrow(df)) {
 }
 
 ```
-For now is not really informative. It concentrates to much europe and similar words (we can fix that with lemmatization and maybe trimming)
+# Conclusion!
 
 
 
 
-
-```{r collocations, echo=FALSE}
-
-# For now it help with the cleaning, maybe change it to a collocation per speech and not all together
-#colloc = speech %>% 
-#  textstat_collocations(min_count = 10) %>% 
-#  as_tibble()
-
-#colloc
-
-
-```
-Is is even less informative, but is very likely do to the bad cleanning (see 2020 STATE and similar)
-This needs better structuring.
-
-
-```{r savecsv, echo=FALSE}
+```{r savecsv}
 # Save the data 
-
+save.image("df_keywords.RData")
 
 ```
 
@@ -369,7 +336,7 @@ This needs better structuring.
 
 Look for more models
 
-```{r, echo=FALSE}
+```{r LDA}
 # LDA, we need to individualize the topics searching
 
 for (i in 1:nrow(df)){
@@ -377,8 +344,9 @@ for (i in 1:nrow(df)){
                 quanteda::corpus(test_df$tokens_lemma[i]) %>%
                 quanteda::tokens() %>%
                 dfm()
+  
   lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
-         LDA(k=20, control = list(seed=123, alpha=0.1))
+         LDA(k=5, control = list(seed=0, alpha=1))
 
   print(terms(lda))
 }
