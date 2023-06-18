@@ -17,26 +17,23 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### 1. Introduction
 
-The European Union (EU) is a conglomeration of __ states with a population of __ million people making it the __ most important economy in the world, behind countries like ___. For this position in the world stage, determining the priorities and concerns that the EU had or has is paramount to understand its internal and external policy and its impact.
+The European Union (EU) is a conglomeration of 27 states with a population of around 447 million people. Given this standing on the world stage, discerning the priorities and concerns of the EU is paramount for understanding its internal and external policies and their impacts.
 
-The State of the Union Address is an speech deliver by the President of the European Commission each September to the Parliament that "takes stock of the achievements of the past year and presents the priorities for the year ahead" (State of the Union Addresses, n.d.). It was institutionalized in 2010 with the signed of the Framework Agreement on relations between the European Parliament and the European Commission (2010), Annex IV(5).
+The State of the Union Address is a speech delivered by the President of the European Commission each September to the Parliament, which "takes stock of the achievements of the past year and presents the priorities for the year ahead" (State of the Union Addresses, n.d.). It was institutionalized in 2010 with the signing of the Framework Agreement on relations between the European Parliament and the European Commission (2010), Annex IV(5).
 
-(add examples of researchers that have study state of the union speeches)
+Up to 2023, 11 speeches have been delivered: four by former President of the Commission José Manuel Barroso (2010-2013), four by former President Jean-Claude Juncker (2015-2018), and three by the current President of the Commission Ursula von der Leyen (2020-2022). Her final speech for the current mandate is scheduled for this September. During European parliamentary elections, no address is delivered.
 
-Up to 2023, 11 speeches have been delivered, four by former President of the Commission José Manuel Barroso (2010-2013), four by former President President Jean-Claude Juncker (2015-2018) and three by current President of the Commission Ursula von der Leyen (2020-2022) with her last speech for the current mandate scheduled for this September. During European parliamentary elections, no address is deliver. 
+The primary objective of this research notebook is to explicate and analyze the key topics of these speeches, as they offer a transparent window into the priorities of European politics and its temporal changes.
 
-The main objective of this research notebook is to explain and analysis the main topics of these speeches as they provide a transparent window into the priorities of the European politics and its changes across time.
-
-This research notebook is organized in __ sections.
+This research notebook is organized into 8 sections. Section 2 describes and demonstrates how we scrape part of our data. Section 3 details the preprocessing and cleaning of the speech text. Section 4 presents a descriptive analysis of the text. Section 5 introduces our LDA model and the selection of its hyperparameters. Section 6 discusses the validation of our model and some limitations of our research. Finally, Section 7 presents our conclusions, followed by a brief 'elevator pitch' in the last section.
 
 -------------------------------------------------------------------------
-Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: 
+Disclaimer: ChatGPT 3.5/4.0 was used in this project, primarily in the following capacities:
 
 - Advanced Search Engine
-  We used chat GPT to ask questions like:
+  We used ChatGPT to ask various questions, such as:
   "Can you give me models for topic analysis?", "Can you give me the strengths and weaknesses of each model?", "and what does htmltools?", "Assume there is a [matching] vector with [the] main themes, how can I [concatenate] my vectors to the matrix?"
-  or
-  Including questions about specific errors encounter while coding. For example:
+  or including questions about specific errors encounter while coding. For example:
   "Why do I have this error
 Warning: package ‘tidyverse’ was built under R version 4.2.3Warning: package ‘ggplot2’ was built under R version 4.2.3Error: package or namespace load failed for ‘tidyverse’:[...], [What is happening?]"
    or
@@ -44,7 +41,7 @@ Warning: package ‘tidyverse’ was built under R version 4.2.3Warning: package
 Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF THE    UNION|State of the Union) [0-9]{4}[\n\s""
   
 - Code Copilot
-  In some instances, we used chatGPT to suggest how to perform a task or how improve existing code. For example:
+  At times, we used ChatGPT to suggest how to perform a task or how to improve existing code. For example:
   "and if I [want to] save multiple attributes from my webpage like name, link, description block if exists[,] how can I do it?"
   or
   "I am trying to remove the following text from different speeches [give an example of the text,] can you give me a regular expression that eliminate this strings"
@@ -52,13 +49,13 @@ Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF 
   "I am using pdf_speech <- sub("^\\s*State of the Union [0-9]{4}\\s*[\\sA-Za-z\\s-]*",     "----------", pdf_speech) but a better Europe does not count in my regular 
   
 - Text Corrector
-  Give a piece of written text like paragraphs of the introductions and other sections to then ask chatGPT check for coherence and formality.
+  We give a piece of written text like paragraphs of the introductions and other sections and then ask chatGPT to check for coherence and formality of our text.
   In an intent to avoid plagarism, we conditioned the use of this function as to always give a text made from the students as input to the algorithm.
   For example: "Can you check for coherence and formality this text?
   From our scrapping we can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then mainly talk about economic recuperation mixed with the migration crisis and investment across multiple industries to finally focus about the pandemic, health and the Ukraine war."
 
 
-The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be).
+The text in square brackets represents either grammatical corrections or added text for clarity. If there are any questions, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be).
 
 -------------------------------------------------------------------------
 
@@ -390,7 +387,7 @@ save.image("df_keywords.RData")
 
 One of the most widely used techniques for topic modeling is the Latent Dirichlet Allocation (LDA) model. LDA is a mixture model; in other words, it assumes that each document is a mixture of topics, and each topic is a blend of words that are not exclusive to that topic. Given these assumptions, the model strives to determine the topic for each word in the documents.
 
-In this section, we adopt code from Van Atteveldt, W., et al. (2022, Chapter 11) for the implementation of the LDA model and the search for hyperparameters. We also used code from Silge J. & Robinson D. (2017, Chapter 6) for the visualization of the words per topic.
+In this section, we adopt code from Van Atteveldt, W., et al. (2022, Chapter 11) for the implementation of the LDA model and the search for hyperparameters. We also used code from Silge J. & Robinson D. (2017, Chapter 6) for the visualization the topics per document.
 
 Initially, we opted to execute a grid search to determine the optimal number of topics (k). We set the value of alpha to an asymmetric vector following the formula alpha = 1/(n + sqrt(k)) (Van Atteveldt, W., et al., 2022, Chapter 11)), where 'n' ranges from 1 to k. Our choice for an asymmetrical alpha stems from the expectation that certain topics may appear more frequently in specific speeches than in others. For instance, should the topics "pandemic" or "health" arise, we anticipate these to be more prevalent in the three most recent speeches (2020-2022) compared to the others.
 
@@ -478,135 +475,69 @@ save.image("checkpointLDA.RData")
 
 #### 6. Validation
 
-To validate we have three roads:
-- Compare multiple models
-- Compare each model with the keywords from the website
-- Manual checking
-
-
-
+To evaluate the performance of our model, we will compare the words from the most representative topics identified in the speeches with the primary theme that we extracted from the official website.
 
 
 ```{r}
 
-  # Create the empty dataframe to store columns
-  df <- data.frame(matrix(nrow=0, ncol=k))
-  colnames(df) <- paste0("Topic", 1:k)
-  
-  for (alpha in alpha_lda){
-    # Check is running
-    cat("Model k=", k, " alpha=", alpha, "\r")
-    
-    # Model training
-    lda_model <- new_tokens %>% dfm() %>% 
-                 convert(to = "topicmodels") %>% 
-                 LDA(k=k, control = list(seed=0, alpha=alpha))
-    
-    # Get the topics and store them in the dataframe
-    topic_words <- paste(terms(lda_model), collapse = "-")
-    topics_df <- data.frame(matrix(matrix(strsplit(topic_words, "-")[[1]]), nrow=1, ncol=k))
-    colnames(topics_df) <- colnames(df)
-    
-    # Add alpha
-    rownames(topics_df) <- paste0("alpha_", alpha)
-    
-    # Bind the results with the summary table
-    df <- rbind(df, topics_df)
-  }
-  
-  print(df)
+documents_gamma <- tidy(lda_k17, matrix = "gamma")
 
-lda_models
-
-
-dfm_matrix <- new_tokens %>% dfm()
-
-lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
-         LDA(k=5, control = list(seed=0, alpha=1/c(1:10)))
-
-terms(lda)
-
-test <- paste(terms(lda), collapse="-")
-test
-
-ap_top_terms <- tidy(lda, matrix = "beta") %>%
-                group_by(topic) %>%
-                slice_max(beta, n=10) %>%
-                ungroup() %>%
-                arrange(topic, -beta) 
-                
-ap_top_terms %>% mutate(term = reorder_within(term, beta, topic)) %>%
-  ggplot(aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
-  scale_y_reordered()
-
-
-
-ap_documents <- tidy(lda, matrix = "gamma")
-ap_documents
-
-ap_wide <- ap_documents %>% 
+df_wide <- documents_gamma %>% 
            unite(topic, topic, sep=" ", remove=FALSE) %>%
            spread(key=topic, value=gamma)
-ap_wide$doc_num <- as.numeric(gsub("text", "", ap_wide$document))
-ap_wide <- ap_wide[order(ap_wide$doc_num), ]
-ap_wide$doc_num <- NULL
+df_wide$doc_num <- as.numeric(gsub("text", "", df_wide$document))
+df_wide <- df_wide[order(df_wide$doc_num), ]
+df_wide$doc_num <- NULL
 
-num_cols <- which(sapply(ap_wide, is.numeric))  # Find the columns which are numeric
-ap_wide[, num_cols] <- round(ap_wide[, num_cols], 3)
+# Find the columns which are numeric
+num_cols <- which(sapply(df_wide, is.numeric)) 
+df_wide[, num_cols] <- round(df_wide[, num_cols], 3)
 
-ap_wide 
+# Column order
+order_col <- c("document", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17")
 
-```
-
-
-```{r}
-
-for (i in 1:length(new_tokens)){
-  
-  dfm_matrix <- new_tokens[i] %>% dfm()
-  lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
-         LDA(k=5, control = list(seed=0, alpha=1/c(1:10)))
-
-  print(terms(lda))
-}
-
+df_wide <- df_wide %>% select(all_of(order_col))
+df_wide
 
 ```
+The compartion text by text is as follows
+
+- Text1 (2022 Speech): it belong solely to the Topic 3 category which main words are "us", "today", "ukraine", "market", "time", "future", "war","new" "democracy", "good". Compared to the main topics extracted from the website (EU support for Ukraine, overcoming the energy crisis, climate, rule of law, democracy, support for European enterprises) there is a clear similarity mainly in ideas like ukraine and democracy but essential topics like climate, law and energy are missing from the bag of words that better represent this text. Therefore some of the characterization of this speech is missing from our model.
+
+-Text2 (2021 Speech): it belong to multiple categories, 82% of the speech words belong to the Topic 5 ("new", "time", "global", "world", "good", "value",  "work", "people", "together", "us") and 18% belong to the Topic 10 ("market", "investment", "freedom", "level", "common", "crisis", "defend", "work", "end", "euro"). Compared to the main topics extracted from the website (COVID-19, global health, vaccination, stronger Europe in the world, European Chips Act, European Defence Union, rule of law and media freedom) gives the impression that Topic 5 represent the the pandemic topic in a more cooperative setting and the Topic 10 focus on the investment planed for Europe. However there are still main ideas that are missing from the representative bag of words like law and media. 
+
+- Text3 (2020 Speech): it belong to multiple categories, 30% of the speech words belong to the Topic 2 ("people", "new", "get", "support", "global", "us", "way", "opportunity", "show", "take"), 49% of the word speech belongs to Topic 6 ("world", "us", "work". "want", "good", "time", "together", "datum", "change", "build") and 21% of the words belong to Topic 9 ("just", "first", "world", "energy", "life", "always", "new", "global", "show", "us"). Compared to the main topics extracted from the website (COVID-19 pandemic, NextGenerationEU, European Health Union, Industrial Strategy, Europe’s Digital Decade, New European Bauhaus) the results are insatisfactory. The only words from the topic selection of our model that are related to the main themes of the speech have an indirect relationship with the pandemic ideas, words like "global", "together" and "support". So we conclude that the model did not perfomed well identifying  the main topics of this speech.    
+
+- Text4 (2018 Speech): it belong to multiple categories, 23% of the words of the speech belong to the Topic 13 ("good", "work", "solidarity", "right", "long", "love", "new", "2019", "always", "day") and 77% of the speech's words belong to Topic 16 ("one", "time", "world", "come", "want", "today", "unite", "us", "border", "speak"). Compared with the main topics extracted from the website (migration, cybersecurity and foreign policy) 
+
+- Text5 (2017 Speech): it belong to multiple categories, 39% of the words of the speech belong to the Topic 12, 7% of the words belong to the Topic 13 and  
+
+- Text6 (2016 Speech):
+
+- Text7 (2015 Speech):
+
+- Text8 (2013 Speech): 
+
+- Text9 (2012 Speech):
+
+- Text10 (2011 Speech):
+
+- Text11 (2010 Speech):
+
+So in conclusion, 
 
 
-DTM
+We would like to dedicate this last part of this section to discuss the shortcomings of our methodology.
 
-```{r}
+- We would like to start by addressing the cleaning issues the mention during section 4. Words like "us" have a ambiguous meaning since it could be the pronoun us of the acronym US (as the country) lowercase. As one can see these two uses are completely different 
 
-```
+- We only search for k nor for alpha 
 
-HDP
+- We iterated the fitting process of the LDA model 10 times 
 
-```{r}
-
-```
-
-CTM
-
-```{r}
-
-```
+- Also, to address the validation process of our model more seriously, it is ideal to use more models such as 
 
 
-
-
-#### 6. Validation
-
-To validate we have three roads:
-- Compare multiple models
-- Compare each model with the keywords from the website
-- Manual checking
-
-```{r}
-
-```
 
 
 
