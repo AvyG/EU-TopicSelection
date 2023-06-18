@@ -16,16 +16,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Research Notebook
 
 The European Union (EU) is a conglomeration of __ states with a population of __ million people making it the __ most important economy in the world, behind countries like ___. For this position in the world stage, determining the priorities and concerns that the EU had or has is paramount to understand its internal and external policy and its impact.  
+The State of the Union Address is an speech deliver by the President of the European Commission each September to the Parliament that "takes stock of the achievements of the past year and presents the priorities for the year ahead" (State of the Union Addresses, n.d.). It was institutionalized in 2010 with the signed of the Framework Agreement on relations between the European Parliament and the European Commission (2010), Annex IV(5).
 
-The State of the Union Address is an speech deliver by the President of the European Commission each September to the Parliament that "takes stock of the achievements of the past year and presents the priorities for the year ahead" [https://state-of-the-union.ec.europa.eu/index_en]. It was institutionalized in 2010 with the signed of the Framework Agreement on relations between the European Parliament and the European Commission - Annex IV(5) [https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=OJ:L:2010:304:0047:0062:EN:PDF]. 
+(add examples of researchers that have study state of the union speeches)
 
-Up to 2023, 11 speeches have been delivered, four by former President of the Commission José Manuel Barroso (2010-2013), four by former President President Jean-Claude Juncker (2015-2018) and three by current President of the Commission Ursula von der Leyen (2020-2022) with her last speech for her current mandate schedule for this September. During European parliamentary elections, no address is deliver. 
+Up to 2023, 11 speeches have been delivered, four by former President of the Commission José Manuel Barroso (2010-2013), four by former President President Jean-Claude Juncker (2015-2018) and three by current President of the Commission Ursula von der Leyen (2020-2022) with her last speech for the current mandate scheduled for this September. During European parliamentary elections, no address is deliver. 
 
 The main objective of this research notebook is to explain and analysis the main topics of these speeches as they provide a transparent window into the priorities of the European politics and its changes across time.
 
 This research notebook is organized in __ sections.
 
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------
 Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: 
 
 - Advanced Search Engine
@@ -48,9 +49,9 @@ Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF 
   "I am using pdf_speech <- sub("^\\s*State of the Union [0-9]{4}\\s*[\\sA-Za-z\\s-]*",     "----------", pdf_speech) but a better Europe does not count in my regular 
 
 
-The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to avelynfernanda.garciaaraya@student.kuleuven.be 
+The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be) who can answer in more detail the questions. 
 
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------
 
 #### Libraries
 
@@ -58,7 +59,7 @@ This are the libraries our project used
 
 ```{r libraries}
 # Decomment this if you want to install any of the packages
-#install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem"))
+#install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem", "tidytext"))
 
 library(httr)
 library(pdftools)
@@ -70,6 +71,7 @@ library(quanteda.textplots)
 library(wordcloud)
 library(topicmodels)
 library(textstem)
+library(tidytext)
 
 ```
 
@@ -103,7 +105,7 @@ webpage <- read_html(base_url)
 ```
 
 
-```{r keywords_current_president2, echo=FALSE}
+```{r keywords_current_president2}
 
 # Extract the key words from the speeches of the current president
 name_speech <- webpage %>% 
@@ -172,6 +174,7 @@ df <- bind_rows(df, temp_df)
 df <- df %>% mutate(year = sub(".*\\b(\\d{4})$", "\\1", name_speech),
                     speech_text = NA)
 df
+
 ```
 
 ```{r save data}
@@ -180,7 +183,7 @@ save.image("df_keywords.RData")
 
 ```
 
-We can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then talk mainly about economic recuperation mixed with the migration crisis and investment across multiple industries to finally mainly talk about COVID19, health and the Ukraine war.
+We can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then mainly talk about economic recuperation mixed with the migration crisis and investment across multiple industries to finally focus about the pandemic, health and the Ukraine war.
 
 
 #### Preprocessing
@@ -261,12 +264,18 @@ df
 
 ```
 
-To finish preprocessing our texts, we tokenize, lemmatize and remove stopwords to improve the results.
+Beside the string mention earlier we also clean the text from punctuation and extra spaces to the save the clean textun our dataframe.
+There are two issues we would like to address here:
 
+- The speech of 2016 has some images with text. This text is readed by the read_pdf command. We try our best to remove it, but it was not possible without eliminate part of the speech that we want to analyze. For this reason we decided to keep this extra text since for our purposes it is not that inconvenient. The images are related to the speech, so in term of finding the main topic of the speech the images should not bias the results.
+- We decided to eliminate certain words that are repetitive and do not give information to our purposes. Addresses like: Mr President and Honourable members are repited so much in the speeches that topic models could confuse them with actual important topics.
+- We also decided to eliminates the contraction 's since, again thinking about topic selection, they do not provide a lot of information.
+
+To finish preprocessing our texts, we tokenize, lemmatize and remove stopwords to improve the results.
 
 ```{r textstem}
 
-custom_stopwords = c(stopwords("en"), "europe", "european", "also", "much")
+custom_stopwords = c(stopwords("en"), "europe", "european")
 
 my_tokens <- df$speech_text %>%  tolower() %>%
                         lemmatize_strings() %>%
@@ -274,60 +283,55 @@ my_tokens <- df$speech_text %>%  tolower() %>%
                         quanteda::tokens() %>%
                         quanteda::tokens_remove(custom_stopwords)
 
-length(my_tokens)
+my_tokens
 
 ```
 
 ### Descriptive Analysis
 
+Before implementing topic models, we should like to see in more detail the text data we extracted from the speeches.
+
 ```{r}
 
-speeches <- corpus(clean_df$tokens_lemma[1]) %>%
-            quanteda::tokens() 
+dfm_matrix <- my_tokens %>% dfm()
 
-textstat_frequency(speeches)[c(1:100), ]
+textstat_frequency(dfm_matrix)[c(1:50),]
 
-speeches
-
-str(clean_df$speech_text[1])
-
-str(clean_df$tokens_lemma[1])
-
+tail(textstat_frequency(dfm_matrix), 50)
 
 ```
 
+We can see that the most frequent words are not really informative. This motive us to remove some of the most common non informative words of the text 
 
+```{r}
+
+custom_stopwords = c(stopwords("en"), "europe", "european","eu","much","can","state","union","make","year","also","must","need","commission", "member")
+
+new_tokens <- my_tokens %>% 
+              quanteda::tokens_remove(custom_stopwords)
+
+new_dfm <- new_tokens %>% dfm()
+
+textstat_frequency(new_dfm)[c(1:50),]
+
+```
 
 We would like to start with some descriptive analysis of the speech. First we use a cloud of words for each speech to see what are the most common words.
 
 ```{r wordcloud for each speech}
 
 # Assuming df is your data frame and speech_text is the column containing speeches
-for (i in 1:length(my_tokens)){
-  dfm_matrix <- my_tokens[i] %>% dfm()
+for (i in 1:length(new_tokens)){
+  
+  dfm_matrix <- new_tokens[i] %>% dfm()
   textplot_wordcloud(dfm_matrix, max_words = 35)
+  title(main = paste("Word Cloud for State of the Union", df$year[i]))
 }
 
-
-dfm_matrix <- my_tokens %>% dfm()
-dfm_matrix 
-  # Create a dfm for each speech
-  dfm_matrix1 <- dfm(tokens1)
-  
-  # Convert the dfm to a data frame
-  dfm_df1 <- convert(dfm_matrix1, to = "data.frame")
-  
-  # Calculate word frequencies
-  dfm_freq1 <- textstat_frequency(dfm_matrix1)
-
-  
-  # Plot a word cloud for each speech
-  textplot_wordcloud(dfm_matrix, max_words = 35)
-
-
 ```
-# Conclusion!
+From the could of word we can see that there seem to be a small differentiation between speeches.
 
+- 2022: 
 
 
 
@@ -339,21 +343,113 @@ save.image("df_keywords.RData")
 
 
 
-
-
 #### Text Analysis (Topic modeling)
 
-Look for more models
+LDA (add description of lda)
+
+[add search of hyperparameters]
 
 ```{r LDA}
-# LDA, we need to individualize the topics searching
+# LDA for all speechs together
 
-for (i in 1:nrow(clean_df)){
-  dfm_matrix <- #corpus(df$clean_tokens[i]) %>%
-                quanteda::corpus(clean_df$tokens_lemma[i]) %>%
-                quanteda::tokens() %>%
-                dfm()
+set.seed(0)
+
+# Create vector for k and alpha
+k_lda <- seq(3,10)
+alpha_lda <- c(10,5,1,0.1,0.01,0.001)
+
+#Create a list to save the models
+lda_models <- list()
+
+# Nest a loop to test each configuration of hyperparameters
+for (k in k_lda){
   
+  # Create the empty dataframe to store columns
+  df <- data.frame(matrix(nrow=0, ncol=k))
+  colnames(df) <- paste0("Topic", 1:k)
+  
+  for (alpha in alpha_lda){
+    # Check is running
+    cat("Model k=", k, " alpha=", alpha, "\r")
+    
+    # Model training
+    lda_model <- new_tokens %>% dfm() %>% 
+                 convert(to = "topicmodels") %>% 
+                 LDA(k=k, control = list(seed=0, alpha=alpha))
+    
+    # Get the topics and store them in the dataframe
+    topic_words <- paste(terms(lda_model), collapse = "-")
+    topics_df <- data.frame(matrix(matrix(strsplit(topic_words, "-")[[1]]), nrow=1, ncol=k))
+    colnames(topics_df) <- colnames(df)
+    
+    # Add alpha
+    rownames(topics_df) <- paste0("alpha_", alpha)
+    
+    # Bind the results with the summary table
+    df <- rbind(df, topics_df)
+  }
+  
+  print(df)
+  
+}
+
+ 
+```
+
+```{r}
+
+
+
+lda_models
+
+
+dfm_matrix <- new_tokens %>% dfm()
+
+lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
+         LDA(k=5, control = list(seed=0, alpha=1/c(1:10)))
+
+terms(lda)
+
+test <- paste(terms(lda), collapse="-")
+test
+
+ap_top_terms <- tidy(lda, matrix = "beta") %>%
+                group_by(topic) %>%
+                slice_max(beta, n=10) %>%
+                ungroup() %>%
+                arrange(topic, -beta) 
+                
+ap_top_terms %>% mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+
+
+
+ap_documents <- tidy(lda, matrix = "gamma")
+ap_documents
+
+ap_wide <- ap_documents %>% 
+           unite(topic, topic, sep=" ", remove=FALSE) %>%
+           spread(key=topic, value=gamma)
+ap_wide$doc_num <- as.numeric(gsub("text", "", ap_wide$document))
+ap_wide <- ap_wide[order(ap_wide$doc_num), ]
+ap_wide$doc_num <- NULL
+
+num_cols <- which(sapply(ap_wide, is.numeric))  # Find the columns which are numeric
+ap_wide[, num_cols] <- round(ap_wide[, num_cols], 3)
+
+ap_wide 
+
+```
+
+
+```{r}
+
+for (i in 1:length(new_tokens)){
+  
+  dfm_matrix <- new_tokens[i] %>% dfm()
   lda <- dfm_matrix %>% convert(to = "topicmodels") %>% 
          LDA(k=5, control = list(seed=0, alpha=1/c(1:10)))
 
@@ -361,22 +457,23 @@ for (i in 1:nrow(clean_df)){
 }
 
 
- 
 ```
 
 
+DTM
 
 ```{r}
 
 ```
 
+HDP
 
 ```{r}
 
 ```
-```{r}
 
-```
+CTM
+
 ```{r}
 
 ```
@@ -403,6 +500,30 @@ To validate we have three roads:
 
 
 
+#### References
 
+State of the Union addresses. (n.d.). State of the Union. https://state-of-the-union.ec.europa.eu/index_en
 
+Framework Agreement on relations between the European Parliament and the European Commission, EP, 304 OJ L (2010). http://data.europa.eu/eli/agree_interinstit/2010/1120/oj/eng
 
+von der Leyen, U. (n.d.). State of the Union Address 2022. State of the Union . https://state-of-the-union.ec.europa.eu/system/files/2023-06/SOTEU_2022_Address_EN.pdf 
+
+von der Leyen, U. (n.d.-a). Press corner. European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_21_4701 
+
+von der Leyen, U. (n.d.-b). State of the Union Address 2020. State of the Union 2020. https://state-of-the-union.ec.europa.eu/system/files/2022-08/soteu_2020_en.pdf 
+
+Juncker, J. C. (n.d.). Press corner. European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/speech_18_5808 
+
+Juncker, J. C. (n.d.-b). Press corner. European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_17_3165 
+
+European Commission, Directorate-General for Communication, Juncker, J. (2016). State of the Union 2016 – , Publications Office of the European Union. https://data.europa.eu/doi/10.2775/968989
+
+Juncker, J. C. (n.d.-c). Press corner. European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_15_5614 
+
+Barroso, J. M. (n.d.). Press corner. European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_13_684
+
+Barroso, J. M. (n.d.-b). Press corner.European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_12_596
+
+Barroso, J. M. (n.d.-c). Press corner.European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_11_607
+
+Barroso, J. M. (n.d.-d). Press corner.European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_10_411
