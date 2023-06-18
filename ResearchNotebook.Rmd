@@ -15,7 +15,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Topic Modeling of the EU State of the Union Speeches
 ## Research Notebook
 
-The European Union (EU) is a conglomeration of __ states with a population of __ million people making it the __ most important economy in the world, behind countries like ___. For this position in the world stage, determining the priorities and concerns that the EU had or has is paramount to understand its internal and external policy and its impact.  
+#### 1. Introduction
+
+The European Union (EU) is a conglomeration of __ states with a population of __ million people making it the __ most important economy in the world, behind countries like ___. For this position in the world stage, determining the priorities and concerns that the EU had or has is paramount to understand its internal and external policy and its impact.
+
 The State of the Union Address is an speech deliver by the President of the European Commission each September to the Parliament that "takes stock of the achievements of the past year and presents the priorities for the year ahead" (State of the Union Addresses, n.d.). It was institutionalized in 2010 with the signed of the Framework Agreement on relations between the European Parliament and the European Commission (2010), Annex IV(5).
 
 (add examples of researchers that have study state of the union speeches)
@@ -30,7 +33,7 @@ This research notebook is organized in __ sections.
 Disclaimer: chatGPT 3.5/4.0 was used in this project. The main uses during the project were: 
 
 - Advanced Search Engine
-  We used chat GPT to ask question like:
+  We used chat GPT to ask questions like:
   "Can you give me models for topic analysis?", "Can you give me the strengths and weaknesses of each model?", "and what does htmltools?", "Assume there is a [matching] vector with [the] main themes, how can I [concatenate] my vectors to the matrix?"
   or
   Including questions about specific errors encounter while coding. For example:
@@ -44,9 +47,16 @@ Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF 
   In some instances, we used chatGPT to suggest how to perform a task or how improve existing code. For example:
   "and if I [want to] save multiple attributes from my webpage like name, link, description block if exists[,] how can I do it?"
   or
-  "I am trying to remove the following text from different speeches [give an example of the text] can you give me a regular expression that eliminate this strings"
+  "I am trying to remove the following text from different speeches [give an example of the text,] can you give me a regular expression that eliminate this strings"
   or
   "I am using pdf_speech <- sub("^\\s*State of the Union [0-9]{4}\\s*[\\sA-Za-z\\s-]*",     "----------", pdf_speech) but a better Europe does not count in my regular 
+  
+- Text Corrector
+  Give a piece of written text like paragraphs of the introductions and other sections to then ask chatGPT check for coherence and formality.
+  In an intent to avoid plagarism, we conditioned the use of this function as to always give a text made from the students as input to the algorithm.
+  For example: "Can you check for coherence and formality this text?
+
+  From our scrapping we can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then mainly talk about economic recuperation mixed with the migration crisis and investment across multiple industries to finally focus about the pandemic, health and the Ukraine war."
 
 
 The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be) who can answer in more detail the questions. 
@@ -57,7 +67,7 @@ The text in between [] are either grammatical corrections or adding text to clar
 
 This are the libraries our project used
 
-```{r libraries}
+```{r libraries, warning=FALSE}
 # Decomment this if you want to install any of the packages
 #install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem", "tidytext"))
 
@@ -77,13 +87,13 @@ library(tidytext)
 
 #### Data Colection
 
-For our project we will concentrate in two sources of data
+In our project, we will focus on two primary data sources:
 
-- The keywords associated with each speech. These keywords are scraped from the official website. We want these keywords for validation purposes.
+1. The keywords associated with each speech. These keywords are extracted from the official website. We will use these keywords for validation purposes.
 
-- The pdf that has the speech. For now, it was for the best to manually download each speech to ensure that: first, they were in English and second, they are the correct speech (for example, a particular case we encounter is accessing the speech of 2020. If one would try to see the speech online, the link will redirect you to the 2021 speech).
+2. The PDFs containing the actual speeches: We have decided to manually download each speech to ensure their relevance. Specifically, we wanted to be sure that the documents are in English only and that they correspond to the correct year. For instance, we found that attempting to access the 2020 speech online would redirect to the 2021 speech.
 
-In this section, we will scrap the main topic keywords associated with each speech. First we will scrap the keywords of the speeches associated with the current president to then scrap the keywords of the speeches associated with the other two presidents.
+In this section, we outline our process for scraping the main topic keywords associated with each speech. We will start by scraping the keywords of speeches given by the current president. Subsequently, we will perform the same process for speeches given by the two preceding presidents.
 
 
 ```{r crawling identification}
@@ -183,23 +193,25 @@ save.image("df_keywords.RData")
 
 ```
 
-We can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then mainly talk about economic recuperation mixed with the migration crisis and investment across multiple industries to finally focus about the pandemic, health and the Ukraine war.
+Our scraping results illustrate an evolution of main topics over time.
+
+Initial speeches primarily focused on the economic condition of the European Union. This then shifted to discussions about economic recovery, intertwined with the migration crisis and investment across various industries. More recent speeches have pivoted to addressing the COVID-19 pandemic, health issues, and the conflict in Ukraine.
 
 
 #### Preprocessing
 
-First, as mention above we manually downloaded the PDF of interest (which are together with this notebook). The reason for that is to ensure the quality and appropriateness of our text. Equally mentioned above, during our scrapping we encounter that some links that were wrongly linked or the speech proposed were in other languages besides English.
+Firstly, as previously mentioned, we manually downloaded the PDF files of interest, which are included alongside this notebook. This step was taken to ensure the quality and suitability of our text.
 
-We notice from the pdfs that some irrelevant information is readable depending on the format of the document. This extra information variates across speeches. Some examples of this irrelevant information for our purposes are:
+We noted that some PDFs contained extra information, irrelevant to our purposes, which varied depending on the document's format. This unnecessary information, which is not pertinent to our analysis, include:
 
-- The cover of some speeches
-- The page number
+- Speech covers
+- Page numbers
 - Titles and subtitles
 - Preambles
 - Images
-- Finishers
+- Closing statements
 
-We try clean the text so we have as much of the spoken speech as possible
+We've made efforts to clean the text to preserve as much of the actual spoken speech as possible.
 
 ```{r readpdfs}
 path_to_folder <- "./PDFs/"
@@ -264,36 +276,40 @@ df
 
 ```
 
-Beside the string mention earlier we also clean the text from punctuation and extra spaces to the save the clean textun our dataframe.
-There are two issues we would like to address here:
+In addition to the situations mentioned earlier, we further cleaned the text by removing punctuation and extra spaces before saving it to our dataframe. We would like to bring attention to some issues that arose during this process:
 
-- The speech of 2016 has some images with text. This text is readed by the read_pdf command. We try our best to remove it, but it was not possible without eliminate part of the speech that we want to analyze. For this reason we decided to keep this extra text since for our purposes it is not that inconvenient. The images are related to the speech, so in term of finding the main topic of the speech the images should not bias the results.
-- We decided to eliminate certain words that are repetitive and do not give information to our purposes. Addresses like: Mr President and Honourable members are repited so much in the speeches that topic models could confuse them with actual important topics.
-- We also decided to eliminates the contraction 's since, again thinking about topic selection, they do not provide a lot of information.
+- The 2016 speech includes some images with text that is read by the 'read_pdf' command. We attempted to remove this, but it proved challenging without discarding portions of the speech that are relevant to our analysis. Consequently, we opted to retain this additional text. Since the images are related to the speech, they should not significantly skew our analysis of the speech's primary topic.
 
-To finish preprocessing our texts, we tokenize, lemmatize and remove stopwords to improve the results.
+- We made a deliberate choice to remove certain frequently repeated words that did not contribute valuable information for our purposes. Phrases such as "Mr President" and "Honourable members" appear so frequently in the speeches that they could potentially confuse topic models by appearing as significant topics.
+
+- Additionally, we decided to eliminate the contraction "'s" as it does not contribute significantly to topic selection.
+
+To complete the preprocessing of our texts, we tokenized, lemmatized, and removed stopwords to refine our results.
 
 ```{r textstem}
 
-custom_stopwords = c(stopwords("en"), "europe", "european")
+custom_stopwords = c(stopwords("en"))
 
-my_tokens <- df$speech_text %>%  tolower() %>%
+speech_tokens <- df$speech_text %>%  tolower() %>%
                         lemmatize_strings() %>%
                         corpus() %>%
                         quanteda::tokens() %>%
                         quanteda::tokens_remove(custom_stopwords)
 
-my_tokens
+speech_tokens
 
 ```
 
+
 ### Descriptive Analysis
 
-Before implementing topic models, we should like to see in more detail the text data we extracted from the speeches.
+Before the application of the topic models, it would be beneficial to examine in greater detail the text data we have extracted from the speeches.
+
+Initially, we will visualize the most frequently used words across all speeches. This exploration may provide valuable insights to guide us in determining the number of topics to be identified in subsequent steps or indicate if our data requires further refinement.
 
 ```{r}
 
-dfm_matrix <- my_tokens %>% dfm()
+dfm_matrix <- speech_tokens %>% dfm()
 
 textstat_frequency(dfm_matrix)[c(1:50),]
 
@@ -301,13 +317,15 @@ tail(textstat_frequency(dfm_matrix), 50)
 
 ```
 
-We can see that the most frequent words are not really informative. This motive us to remove some of the most common non informative words of the text 
+Many of the most frequent words in our dataset do not substantially contribute to understanding the main topics of the speeches. These words are often more related to the intent or style of a speech rather than the core message. For example, the words "must" and "can" are typically used to express present or future intent, an expected finding since one of the primary functions of these speeches is to outline priorities for the upcoming year. Moreover, terms such as "europe", "european", and "union" are prevalent due to the inherent context of the speech, yet they do not necessarily elucidate the central topics.
+
+Such observations prompt us to eliminate some of the most commonly occurring, yet non-informative, words from the text.
 
 ```{r}
 
 custom_stopwords = c(stopwords("en"), "europe", "european","eu","much","can","state","union","make","year","also","must","need","commission", "member")
 
-new_tokens <- my_tokens %>% 
+new_tokens <- speech_tokens %>% 
               quanteda::tokens_remove(custom_stopwords)
 
 new_dfm <- new_tokens %>% dfm()
@@ -316,7 +334,7 @@ textstat_frequency(new_dfm)[c(1:50),]
 
 ```
 
-We would like to start with some descriptive analysis of the speech. First we use a cloud of words for each speech to see what are the most common words.
+Now, with our refined bag of words, we will conclude our descriptive analysis by creating a word cloud for each speech. This will allow us to visually represent the most prominent ideas expressed in each individual speech.
 
 ```{r wordcloud for each speech}
 
@@ -329,10 +347,36 @@ for (i in 1:length(new_tokens)){
 }
 
 ```
-From the could of word we can see that there seem to be a small differentiation between speeches.
 
-- 2022: 
+From the word clouds, we can observe apparent differences between speeches:
 
+- 2022: The focus is primarily on "ukraine" and related terms ("war", "crisis", "ukrainian", "russia"). There are also words connected to the "economy" ("price", "gas"), along with "democracy", and some words that are more ambiguous in their classification such as "solidarity", "future", "global", "people", "support".
+
+- 2021: Frequent words include some generic terms ("new", "time", "world", "global", "work", "together"), economic terms ("market", "investment"), and the words "pandemic", "freedom", and "climate", which all could be linked to the generic words.
+
+- 2020: Again, generic words like "world", "want", "work", and "people" appear, in addition to some words indirectly related to the pandemic ("digital", "strong", "together").
+
+- 2018: Repeated words include more ambiguous ones ("world", "good", "today"), economic terms ("investment","trade"), and new words like "election", "Africa", and "border", to name a few.
+
+- 2017: Frequently seen words are "want", "good", "work", "now", "new", etc. Identifying clear connections among words in this speech is challenging.
+
+- 2016: Frequent words include "work", "get", "take", "job", "parliament", etc. Establishing clear connections among words in this speech is also difficult.
+
+- 2015: Some recurring themes like "greece", "euro", and "crisis" are present, along with a clear new cluster of "refugee" ("asylum") and the words "policy" and "climate".
+
+- 2013: The main words are "crisis", "one". The economic cluster of words ("market", "euro", "economy", "economic") is very prominent.
+
+- 2012: The word "political" is predominant, along with clusters of ideas related to "economics" ("bank","market","euro") and "reform" ("change", "decision", "way").
+
+- 2011: The focus is on "economic/economy"-related words ("market", "growth", "financial"), with related terms such as "euro" and "greece".
+
+- 2010: This speech primarily contains words related to economics ("budget", "financial", "growth", "job", "market").
+
+Overall, we see that all speeches maintain an economic aspect, which is noticeably more prominent in older speeches (2010-2012) and the most recent speech (2022). Additionally, we observe a cluster of words related to migration ("refugee", "border") appearing in 2015 and 2018, fading in 2020 with the advent of COVID-19 and the war in Ukraine (and their associated economic crises). The speeches from 2016 and 2017 present some challenges when it comes to precise topic identification.
+
+Despite these observations, our findings are consistent with the main themes extracted from the official websites and recent European history.
+
+We have intentionally excluded certain words, such as "us", from our analysis because of their potential multiple meanings. Additionally, the word cloud reveals potential issues with our text cleaning process. For instance, the words "t", "1", and "2" occasionally appear in the clouds, along with nearly identical terms like "economic" and "economy". A more thorough explanation is provided in the Validation section.
 
 
 ```{r savecsv}
@@ -342,7 +386,6 @@ save.image("df_keywords.RData")
 ```
 
 
-
 #### Text Analysis (Topic modeling)
 
 LDA (add description of lda)
@@ -350,16 +393,13 @@ LDA (add description of lda)
 [add search of hyperparameters]
 
 ```{r LDA}
-# LDA for all speechs together
+# LDA for all speeches together (this takes a few moments to run)
 
 set.seed(0)
 
 # Create vector for k and alpha
 k_lda <- seq(3,10)
 alpha_lda <- c(10,5,1,0.1,0.01,0.001)
-
-#Create a list to save the models
-lda_models <- list()
 
 # Nest a loop to test each configuration of hyperparameters
 for (k in k_lda){
@@ -497,6 +537,13 @@ To validate we have three roads:
 #### Conclusions
 
 ()
+
+
+
+#### Elevator Pitch
+
+
+
 
 
 
