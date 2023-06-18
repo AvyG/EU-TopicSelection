@@ -55,11 +55,10 @@ Error: '\s' is an unrecognized escape in character string starting ""^(STATE OF 
   Give a piece of written text like paragraphs of the introductions and other sections to then ask chatGPT check for coherence and formality.
   In an intent to avoid plagarism, we conditioned the use of this function as to always give a text made from the students as input to the algorithm.
   For example: "Can you check for coherence and formality this text?
-
   From our scrapping we can see that there has been a evolution of main topics across time. The first speeches are mainly about the economic shape of the European union, to then mainly talk about economic recuperation mixed with the migration crisis and investment across multiple industries to finally focus about the pandemic, health and the Ukraine war."
 
 
-The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be) who can answer in more detail the questions. 
+The text in between [] are either grammatical corrections or adding text to clarify the example. If there are any question, please send an email to any of the students (for example: avelynfernanda.garciaaraya@student.kuleuven.be).
 
 -------------------------------------------------------------------------
 
@@ -69,7 +68,7 @@ This are the libraries our project used
 
 ```{r libraries, warning=FALSE}
 # Decomment this if you want to install any of the packages
-#install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem", "tidytext"))
+#install.packages(c("rvest","tidyverse","httr","pdftools","quanteda", "wordcloud","topicmodels","textstem", "tidytext", "topicdoc"))
 
 library(httr)
 library(pdftools)
@@ -82,10 +81,11 @@ library(wordcloud)
 library(topicmodels)
 library(textstem)
 library(tidytext)
+library(topicdoc)
 
 ```
 
-#### Data Colection
+#### 2. Data Colection
 
 In our project, we will focus on two primary data sources:
 
@@ -198,7 +198,7 @@ Our scraping results illustrate an evolution of main topics over time.
 Initial speeches primarily focused on the economic condition of the European Union. This then shifted to discussions about economic recovery, intertwined with the migration crisis and investment across various industries. More recent speeches have pivoted to addressing the COVID-19 pandemic, health issues, and the conflict in Ukraine.
 
 
-#### Preprocessing
+#### 3. Preprocessing
 
 Firstly, as previously mentioned, we manually downloaded the PDF files of interest, which are included alongside this notebook. This step was taken to ensure the quality and suitability of our text.
 
@@ -301,7 +301,7 @@ speech_tokens
 ```
 
 
-### Descriptive Analysis
+### 4. Descriptive Analysis
 
 Before the application of the topic models, it would be beneficial to examine in greater detail the text data we have extracted from the speeches.
 
@@ -386,24 +386,94 @@ save.image("df_keywords.RData")
 ```
 
 
-#### Text Analysis (Topic modeling)
+#### 5. Topic Modeling
 
-LDA (add description of lda)
+One of the most widely used techniques for topic modeling is the Latent Dirichlet Allocation (LDA) model. LDA is a mixture model; in other words, it assumes that each document is a mixture of topics, and each topic is a blend of words that are not exclusive to that topic. Given these assumptions, the model strives to determine the topic for each word in the documents.
 
-[add search of hyperparameters]
+In this section, we adopt code from Van Atteveldt, W., et al. (2022, Chapter 11) for the implementation of the LDA model and the search for hyperparameters. We also used code from Silge J. & Robinson D. (2017, Chapter 6) for the visualization of the words per topic.
+
+Initially, we opted to execute a grid search to determine the optimal number of topics (k). We set the value of alpha to an asymmetric vector following the formula alpha = 1/(n + sqrt(k)) (Van Atteveldt, W., et al., 2022, Chapter 11)), where 'n' ranges from 1 to k. Our choice for an asymmetrical alpha stems from the expectation that certain topics may appear more frequently in specific speeches than in others. For instance, should the topics "pandemic" or "health" arise, we anticipate these to be more prevalent in the three most recent speeches (2020-2022) compared to the others.
+
+We fitted our LDA models using different values of k, ranging from 3 to 30. While this range might seem arbitrary, it is justified considering that the maximum number of keywords scraped from the main topics is 9. If we interpret each keyword as a topic, the range is sufficient for finding an optimal quantity of topics. The metrics we will use to define this optimal point are Perplexity and Coherence of the model. Perplexity evaluates how well the model predicts the word distribution, and Coherence assesses the semantic cohesiveness of the topics. In general, we are seeking the model that minimizes both these metrics.
 
 ```{r LDA}
-# LDA for all speeches together (this takes a few moments to run)
+# LDA for all speeches together (this takes minutes to run, beware)
 
-set.seed(0)
+# Create vector for k
+k_lda <- seq(3,30)
+results <- list()
 
-# Create vector for k and alpha
-k_lda <- seq(3,10)
-alpha_lda <- c(10,5,1,0.1,0.01,0.001)
+dfm_matrix <- new_tokens %>% dfm()
+dtm <- dfm_matrix %>% convert(to = "topicmodels")
 
-# Nest a loop to test each configuration of hyperparameters
+
+# Loop to test configuration of hyperparameters
 for (k in k_lda){
   
+  iteration_results <- list()
+  alpha = 1/((1:k)+sqrt(k))
+  
+  for (i in 1:10){
+
+  cat("Model k=", k, " iteration=", i, "\r")
+  
+  lda_model <- dfm_matrix %>%
+               convert(to = "topicmodels") %>% 
+               LDA(k=k, control = list(alpha=alpha))
+  
+  iteration_results[[as.character(i)]] <- data.frame(
+                              perplexity = perplexity(lda_model),
+                              coherence = mean(topic_coherence(lda_model, dtm)))
+  
+  }
+  
+  avg_perplexity <- mean(sapply(iteration_results, function(x) x$perplexity))
+  avg_coherence <- mean(sapply(iteration_results, function(x) x$coherence))
+  
+  results[[as.character(k)]] <- data.frame(
+                                perplexity <- avg_perplexity,
+                                coherence <- avg_coherence)
+
+}
+
+bind_rows(results, .id="k") %>% 
+  mutate(k=as.numeric(k)) %>%
+  pivot_longer(-k) %>% 
+  ggplot() + 
+  geom_line(aes(x=k, y=value)) + 
+  xlab("Number of topics") + 
+  facet_grid(name ~ ., scales="free")
+
+ 
+```
+
+We can see that the model with the lowest value in both metrics is k=17. Once we define the model we will use, we can check the topics extracted.
+
+
+```{r}
+k <- 17
+
+lda_k17 <- dfm_matrix %>%
+           convert(to = "topicmodels") %>% 
+           LDA(k=k, control = list(seed=0, alpha=1/((1:k)+sqrt(k))))
+
+terms(lda_k17, 10)
+
+```
+
+For the interpretation of the topics:
+
+Certain topics are very clear what are about. 
+
+Certain topics are ambiguous to interpret
+
+
+
+
+
+
+```{r}
+
   # Create the empty dataframe to store columns
   df <- data.frame(matrix(nrow=0, ncol=k))
   colnames(df) <- paste0("Topic", 1:k)
@@ -430,15 +500,6 @@ for (k in k_lda){
   }
   
   print(df)
-  
-}
-
- 
-```
-
-```{r}
-
-
 
 lda_models
 
@@ -521,7 +582,7 @@ CTM
 
 
 
-#### Text Analysis (Validation)
+#### 6. Validation
 
 To validate we have three roads:
 - Compare multiple models
@@ -534,20 +595,20 @@ To validate we have three roads:
 
 
 
-#### Conclusions
+#### 7. Conclusions
 
 ()
 
 
 
-#### Elevator Pitch
+#### 8. Elevator Pitch
 
 
 
 
 
 
-#### References
+#### 9. References
 
 State of the Union addresses. (n.d.). State of the Union. https://state-of-the-union.ec.europa.eu/index_en
 
@@ -574,3 +635,15 @@ Barroso, J. M. (n.d.-b). Press corner.European Commission - European Commission.
 Barroso, J. M. (n.d.-c). Press corner.European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_11_607
 
 Barroso, J. M. (n.d.-d). Press corner.European Commission - European Commission. https://ec.europa.eu/commission/presscorner/detail/en/SPEECH_10_411
+
+Van Atteveldt, W., Trilling, D., & Calderón, C. A. (2022). Computational Analysis of Communication. Wiley Blackwell. Retrieved June 18 2023 from https://cssbook.net/content/chapter11.html#sec-beyondlda 
+
+Silge J. & Robinson D. (2017). Text mining with r : a tidy approach (First). O'Reilly Media. Retrieved June 18 2023 from https://search.ebscohost.com/login.aspx?direct=true&scope=site&db=nlebk&db=nlabk&AN=1533983.
+
+
+
+
+
+
+
+
