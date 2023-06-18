@@ -1,8 +1,9 @@
 ---
 title: "Research Notebook"
-author: "Avelyn Garcia, Stephan Pangaanbean, Chris Butcher"
+author: "Avelyn Garcia, Stefan Panggabean, Chris Butcher"
 date: "31-05-2023"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -553,7 +554,7 @@ As previously stated in the validation section, there are multiple challenges to
 
 #### 8. Elevator Pitch
 
-
+Our group analyzes the big themes from all the State of the Union speeches of the European Union to see how policies shift over time, from 2010 to 2022. To do this, we extract the most important keywords of each speech in text format by using Latent Dirichlet Allocation and use it to infer concerns deemed paramount to address by the European Union. To do this, our group decided the range of topic numbers and sought to minimize metrics of word distribution prediction and semantic cohesiveness of topics based on simulations. In general, our group obtained that in spite of small issues on interpreting results, the model was able to identify the main topics of each speech after checking with the keywords from the European Union site.
 
 
 
