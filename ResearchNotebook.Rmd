@@ -461,12 +461,27 @@ terms(lda_k17, 10)
 
 ```
 
-For the interpretation of the topics:
+When we are interpreting topics from our model certain topics are quite apparent.
 
-Certain topics are very clear what are about. 
+For instance, Topic 3 is clearly about Ukraine and its ongoing war. Topics 7, 8, 10, and 11 concern economic matters, but from different perspectives. Topic 7 appears to focus on the growth of the internal EU market, while Topic 8 seems to address policy or reforms following an economic crisis. Topic 10 seemingly centers around protecting investment during a crisis in the eurozone, and Topic 11 looks to be related to economic growth, particularly in response to a crisis.
 
-Certain topics are ambiguous to interpret
+Another clearly distinguishable topic is Topic 15, which pertains to the refugee crisis. This could potentially refer to the lasting effects of the euro economic crisis in Greece or the refugee crisis specifically affecting Greece.
 
+The remaining topics are somewhat ambiguous, making interpretation challenging. A clear central idea does not readily emerge from the associated bag of words.
+
+```{r savecsv}
+# Save the data 
+save.image("checkpointLDA.RData")
+
+```
+
+
+#### 6. Validation
+
+To validate we have three roads:
+- Compare multiple models
+- Compare each model with the keywords from the website
+- Manual checking
 
 
 
