@@ -376,9 +376,9 @@ Despite these observations, our findings are consistent with the main themes ext
 We have intentionally excluded certain words, such as "us", from our analysis because of their potential multiple meanings. Additionally, the word cloud reveals potential issues with our text cleaning process. For instance, the words "t", "1", and "2" occasionally appear in the clouds, along with nearly identical terms like "economic" and "economy". A more thorough explanation is provided in the Validation section.
 
 
-```{r savecsv}
+```{r savedata1}
 # Save the data 
-save.image("df_keywords.RData")
+save.image("savedata.RData")
 
 ```
 
@@ -394,7 +394,7 @@ Initially, we opted to execute a grid search to determine the optimal number of 
 We fitted our LDA models using different values of k, ranging from 3 to 30. While this range might seem arbitrary, it is justified considering that the maximum number of keywords scraped from the main topics is 9. If we interpret each keyword as a topic, the range is sufficient for finding an optimal quantity of topics. The metrics we will use to define this optimal point are Perplexity and Coherence of the model. Perplexity evaluates how well the model predicts the word distribution, and Coherence assesses the semantic cohesiveness of the topics. In general, we are seeking the model that minimizes both these metrics.
 
 ```{r LDA}
-# LDA for all speeches together (this takes minutes to run, beware)
+# LDA for all speeches together (this ~30 mins, beware running this cell)
 
 # Create vector for k
 k_lda <- seq(3,30)
@@ -466,9 +466,9 @@ Another clearly distinguishable topic is Topic 15, which pertains to the refugee
 
 The remaining topics are somewhat ambiguous, making interpretation challenging. A clear central idea does not readily emerge from the associated bag of words.
 
-```{r savecsv}
+```{r savedata}
 # Save the data 
-save.image("checkpointLDA.RData")
+save.image("savedata.RData")
 
 ```
 
@@ -500,50 +500,51 @@ df_wide <- df_wide %>% select(all_of(order_col))
 df_wide
 
 ```
-The compartion text by text is as follows
 
-- Text1 (2022 Speech): it belong solely to the Topic 3 category which main words are "us", "today", "ukraine", "market", "time", "future", "war","new" "democracy", "good". Compared to the main topics extracted from the website (EU support for Ukraine, overcoming the energy crisis, climate, rule of law, democracy, support for European enterprises) there is a clear similarity mainly in ideas like ukraine and democracy but essential topics like climate, law and energy are missing from the bag of words that better represent this text. Therefore some of the characterization of this speech is missing from our model.
+We now contrast the results of our model with the main themes of the speeches extracted for each document:
 
--Text2 (2021 Speech): it belong to multiple categories, 82% of the speech words belong to the Topic 5 ("new", "time", "global", "world", "good", "value",  "work", "people", "together", "us") and 18% belong to the Topic 10 ("market", "investment", "freedom", "level", "common", "crisis", "defend", "work", "end", "euro"). Compared to the main topics extracted from the website (COVID-19, global health, vaccination, stronger Europe in the world, European Chips Act, European Defence Union, rule of law and media freedom) gives the impression that Topic 5 represent the the pandemic topic in a more cooperative setting and the Topic 10 focus on the investment planed for Europe. However there are still main ideas that are missing from the representative bag of words like law and media. 
+- Text1 (2022 Speech): This text belongs solely to Topic 3, the primary words of which are "us", "today", "ukraine", "market", "time", "future", "war", "new", "democracy", and "good". In comparison to the main topics extracted from the website (EU support for Ukraine, overcoming the energy crisis, climate, rule of law, democracy, support for European enterprises), there is a clear overlap, particularly in areas like Ukraine and democracy. However, key topics such as climate, law, and energy are absent from the bag of words that best represent this text. Consequently, our model does not fully capture some of the speech's characterization.
 
-- Text3 (2020 Speech): it belong to multiple categories, 30% of the speech words belong to the Topic 2 ("people", "new", "get", "support", "global", "us", "way", "opportunity", "show", "take"), 49% of the word speech belongs to Topic 6 ("world", "us", "work". "want", "good", "time", "together", "datum", "change", "build") and 21% of the words belong to Topic 9 ("just", "first", "world", "energy", "life", "always", "new", "global", "show", "us"). Compared to the main topics extracted from the website (COVID-19 pandemic, NextGenerationEU, European Health Union, Industrial Strategy, Europe’s Digital Decade, New European Bauhaus) the results are insatisfactory. The only words from the topic selection of our model that are related to the main themes of the speech have an indirect relationship with the pandemic ideas, words like "global", "together" and "support". So we conclude that the model did not perfomed well identifying  the main topics of this speech.    
+- Text 2 (2021 Speech): This speech can be categorized into multiple topics. Approximately 82% of the speech's words are associated with Topic 5, which includes key terms such as "new", "time", "global", "world", "good", "value", "work", "people", "together", and "us". The remaining 18% of words pertain to Topic 10, with keywords such as "market", "investment", "freedom", "level", "common", "crisis", "defend", "work", "end", and "euro". When we compare these findings with the main themes extracted from the website - which include COVID-19, global health, vaccination, a stronger Europe in the world, the European Chips Act, the European Defence Union, rule of law, and media freedom - it seems that Topic 5 primarily represents the pandemic topic in a more cooperative context, whereas Topic 10 focuses on investment plans for Europe. Nonetheless, key themes such as law and media are notably absent from the bag of words that best represent this speech. 
 
-- Text4 (2018 Speech): it belong to multiple categories, 23% of the words of the speech belong to the Topic 13 ("good", "work", "solidarity", "right", "long", "love", "new", "2019", "always", "day") and 77% of the speech's words belong to Topic 16 ("one", "time", "world", "come", "want", "today", "unite", "us", "border", "speak"). Compared with the main topics extracted from the website (migration, cybersecurity and foreign policy) 
+- Text 3 (2020 Speech): This speech falls under multiple categories. Roughly 30% of the speech's words pertain to Topic 2, which includes "people", "new", "get", "support", "global", "us", "way", "opportunity", "show", and "take". Approximately 49% of the words are associated with Topic 6, which comprises "world", "us", "work", "want", "good", "time", "together", "datum", "change", and "build". The remaining 21% of words correspond to Topic 9, featuring "just", "first", "world", "energy", "life", "always", "new", "global", "show", and "us". When we juxtapose these findings with the main themes identified from the website - which include the COVID-19 pandemic, NextGenerationEU, European Health Union, Industrial Strategy, Europe’s Digital Decade, and the New European Bauhaus - the results prove unsatisfactory. The only words from our model's topic selection that bear any relation to the speech's primary themes have an indirect connection with the pandemic, such as "global", "together", and "support". Consequently, we conclude that the model did not perform adequately in identifying the main themes of this speech.   
 
-- Text5 (2017 Speech): it belong to multiple categories, 39% of the words of the speech belong to the Topic 12, 7% of the words belong to the Topic 13 and  
+- Text 4 (2018 Speech): This speech falls under multiple categories. Approximately 23% of the speech's words are associated with Topic 13, which includes "good", "work", "solidarity", "right", "long", "love", "new", "2019", "always", and "day". Meanwhile, 77% of the speech's words pertain to Topic 16, with words such as "one", "time", "world", "come", "want", "today", "unite", "us", "border", and "speak". When we compare these findings with the main themes extracted from the website - namely migration, cybersecurity, and foreign policy - we notice that, aside from the word "border", there is no significant overlap between our main topics and the official main themes. Therefore, we conclude that the model did not effectively categorize this speech.
 
-- Text6 (2016 Speech):
+- Text 5 (2017 Speech): This speech spans across multiple categories. About 39% of the speech's words are associated with Topic 12, with words such as "new", "good", "work", "president", "area", "parliament", "want", "rule", "propose", and "law". Around 7% of the words are linked to Topic 13, which includes "good", "work", "solidarity", "right", "long", "love", "new", "2019", "always", and "day". Meanwhile, 54% of the speech's words pertain to Topic 14, with words such as "want", "now", "last", "single", "take", "parliament", "strong", "people", "democratic", and "today". Upon comparison with the main themes extracted from the website — namely united, stronger and more democratic union, trade, investment screening, cybersecurity, industry, data and democracy — there is a modest overlap with some of the most frequent words in the topics, such as "strong", "democratic" and "rule". However, this overlap is quite minimal, suggesting that in this instance, the topics do not cover all the principal themes of the speech.
 
-- Text7 (2015 Speech):
+- Text 6 (2016 Speech): This speech pertains solely to Topic 17, characterized by keywords such as "work", "take", "get", "job", "parliament", "world", "billion", "mean", "want", and "today". When compared with the main themes extracted from the website — including investments in youth, jobseekers and start-ups, public Wi-Fi access, fairer copyright laws, the Investment Plan for Africa, and the new European Border and Coast Guard — it's challenging to establish a clear relationship between the selected topic and the official themes of the speech.
 
-- Text8 (2013 Speech): 
+- Text 7 (2015 Speech): This speech falls under multiple categories. Primarily, 96% of the speech's words belong to Topic 15, with keywords such as "refugee", "euro", "Greece", "crisis", "time", "area", "president", "today", "want", and "work". Additionally, 4% of the words align with Topic 12, which features "new", "good", "work", "president", "area", "parliament", "want", "rule", "propose", and "law" as its key words. When compared with the main topics extracted from the website, which include the emerging refugee crisis, the future of the Euro, foreign policy, migration, external action, and economic and fiscal policy, the association with Topic 15 is quite evident. The link to Topic 12 seems to stem from common words shared between the topics. 
 
-- Text9 (2012 Speech):
+- Text 8 (2013 Speech): This speech belongs to multiple categories. Primarily, 87% of the speech's words are associated with Topic 4, which includes key terms such as "one", "crisis", "country", "people", "market", "together", "us", "way", "come", and "time". Additionally, 13% of the speech's words align with Topic 11, characterized by "economic", "growth", "budget", "crisis", "financial", "job", "now", "us", "area", and "euro". When compared with the main topics extracted from the website, which encompass economic recovery, European integration, deepening of the Economic and Monetary Union, and the European elections of 2014, the association with both topics seems reasonable. The greater relation to Topic 4 is also expected, given its more uplifting words, which are typical in a speech about recovery. Nevertheless, just as with previous speeches, the selected topics do not cover the entire range of themes present in the speech.
 
-- Text10 (2011 Speech):
+- Text 9 (2012 Speech): This speech belongs solely to the Topic 8 category, characterized by main words such as "political", "economic", "mean", "bank", "crisis", "country", "reform", "debate", "world", and "today". When compared to the main topics extracted from the website — 'A New Thinking for Europe', 'Decisive Deal for Europe', 'Treaty Change', '17/27 Dimension', and 'Expanding Public Debate' — it might appear at first glance that the selected topic is unrelated to the main themes. However, upon closer inspection, it becomes evident that the main themes we extracted are actually subtitles of the speech. When we consider the content of the speech itself, Topic 8 emerges as a more reasonable selection for the central theme. 
 
-- Text11 (2010 Speech):
+- Text 10 (2011 Speech): This speech belongs to multiple categories. Predominantly, 94% of the words of the speech belong to Topic 7 ("world", "euro", "market", "growth", "area", "today", "us", "financial", "proposal", "economic"), while 6% belongs to Topic 10 ("market", "investment", "freedom", "level", "common", "crisis", "defend", "work", "end", "euro"). Compared to the main topics extracted from the website, which include the financial transaction tax (FTT), eurozone bond, economic crisis, and defence sector integration, the topic selections from our model are reasonable, as they overlap well with the main themes of the speech. 
 
-So in conclusion, 
+- Text 11 (2010 Speech): This speech falls into multiple categories. Predominantly, 70% of the words in the speech belong to Topic 1 ("growth", "see", "world", "common", "new", "action", "job", "proposal", "energy", "market") and 30% of the words belong to Topic 11 ("economic", "growth", "budget", "crisis", "financial", "job", "now", "us", "area", and "euro"). Compared to the main topics extracted from the website (EU Economic governance, growth, freedom, security, and justice, EU Budget, and the EU on the global stage), both topics are related to the main themes of the speech. However, neither of the topics mentions security or justice, so these themes are not represented in our topics.
 
+In conclusion, our model can appropriately select the topic of some speeches. Primarily, for the speeches of 2022, 2021, 2015, 2013 and 2010, the topic selection was closely related to the expected main theme. However, in the remaining speeches, the lack of correlation between the selected topics and the main themes of the speeches was disappointing."
 
-We would like to dedicate this last part of this section to discuss the shortcomings of our methodology.
+There could be several reasons for these results. Thus, we would like to dedicate the final part of this section to discussing the shortcomings of our methodology.
 
-- We would like to start by addressing the cleaning issues the mention during section 4. Words like "us" have a ambiguous meaning since it could be the pronoun us of the acronym US (as the country) lowercase. As one can see these two uses are completely different 
+- Firstly, we would like to address the cleaning issues mentioned in section 4. Words such as "us" can have ambiguous meanings as they could refer to the pronoun 'us' or be an acronym for 'United States' in lowercase. As one can see, these two uses have entirely different implications, but in our study, we unintentionally combined them. One way to deal with this would be to lowercase only words that begin with a capitalized letter. 
 
-- We only search for k nor for alpha 
+- Another issue we perceived during our descriptive analysis was the presence of non-informative words such as "t", "1", and "2". Their presence indicates that our cleaning process was not as thorough as it should have been. It is well-known that for topic analysis, the results are extremely sensitive to the cleaning regime. 
 
-- We iterated the fitting process of the LDA model 10 times 
+- Aside from cleaning issues, we also noted limitations to the validity of our model due to decisions we made during the fitting step. One such decision was that we only searched for optimal 'k', neglecting 'alpha', which is an important hyperparameter that influences the model and its results. We recognize that for future steps, it is important to optimize 'alpha' in the same manner we did for 'k'.
 
-- Also, to address the validation process of our model more seriously, it is ideal to use more models such as 
+- Also, during the fitting step, we only iterated the fitting process of the LDA model 10 times. This was due to the computational time the code requires for fitting multiple models. However, we recognize that such a low number of iterations makes it difficult for our metric to converge to its real result, potentially skewing our decision on which model is most appropriate. In future iterations of this work, it would be ideal to increase this value until we are certain of convergence.
 
-
+- Furthermore, to more seriously address the validation process of our model, it would be ideal to use additional models such as the Structural Topic Model (STM) or Dynamic Topic Models (DTM). The latter is particularly interesting to us since the model is designed to handle documents that evolve over time. Using other models would provide us with additional comparison points for the topics suggested by our models, thereby strengthening the final decision on the most appropriate model.
 
 
 
 #### 7. Conclusions
 
-()
+However as we previously stated in the validation section, there are multiple challenges to 
+
 
 
 
